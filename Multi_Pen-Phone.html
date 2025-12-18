@@ -3,60 +3,75 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Pendulum Simulation | Aarav Sinha</title>
+    <title>Aarav Sinha | Dynamics Lab</title>
     <style>
         :root { --neon: #00f2ff; --bg: #000; --panel: #0d1117; --border: #30363d; --accent: #ccff00; }
         * { box-sizing: border-box; font-family: 'JetBrains Mono', monospace; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; background: #000; color: #e6edf3; overflow-x: hidden; width: 100vw; }
-        
-        /* SCROLLBAR */
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: var(--neon); border-radius: 10px; }
+        body, html { margin: 0; padding: 0; background: #000; color: #e6edf3; overflow: hidden; height: 100vh; width: 100vw; }
 
-        .global-watermark { position: fixed; top: 10px; right: 15px; color: rgba(0, 242, 255, 0.15); font-size: 10px; pointer-events: none; z-index: 10001; text-transform: uppercase; }
+        .global-watermark { position: fixed; top: 10px; right: 15px; color: rgba(0, 242, 255, 0.2); font-size: 10px; z-index: 100; pointer-events: none; }
 
-        #setup-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10000; padding: 20px; }
-        .init-box { border: 1px solid var(--neon); padding: 30px 20px; text-align: center; background: #0a0a0a; border-radius: 8px; width: 100%; max-width: 320px; }
-        
-        #lab-screen { display: none; width: 100vw; flex-direction: column; }
-        #viewport-container { width: 100%; height: 50vh; position: sticky; top: 0; background: radial-gradient(circle at center, #0d1117 0%, #000 100%); z-index: 10; border-bottom: 1px solid var(--border); touch-action: none; }
-        
-        .ui-stack { width: 100%; padding: 12px; background: #000; }
-        .card { background: var(--panel); border: 1px solid var(--border); padding: 15px; margin-bottom: 12px; border-radius: 4px; }
-        .card h3 { font-size: 10px; color: var(--neon); letter-spacing: 2px; margin: 0 0 12px 0; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        /* SETUP SCREEN */
+        #setup-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; z-index: 20000; }
+        .init-box { border: 1px solid var(--neon); padding: 25px; text-align: center; background: #0a0a0a; border-radius: 8px; width: 260px; }
 
-        /* HORIZONTAL CARDS */
-        #telem_content { display: flex; overflow-x: auto; gap: 10px; padding-bottom: 5px; scroll-snap-type: x mandatory; }
-        .telem-card { min-width: 260px; background: rgba(0,0,0,0.4); border: 1px solid #333; padding: 12px; border-radius: 4px; scroll-snap-align: start; flex-shrink: 0; }
-        .telem-card h4 { color: var(--neon); font-size: 10px; margin: 0 0 8px 0; border-bottom: 1px solid #222; padding-bottom: 4px; }
+        /* LAB VIEWPORT */
+        #lab-screen { display: none; height: 100vh; flex-direction: column; overflow: hidden; position: relative; }
         
-        .stat-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
+        /* UPDATED RADIAL GRADIENT */
+        #viewport-container { 
+            flex: 1; 
+            background: radial-gradient(circle at 50% 115px, #042104 0%, #000000 70%); 
+            touch-action: none; 
+        }
+
+        /* DRAWER SYSTEM */
+        #ui-drawer { 
+            position: absolute; bottom: 0; left: 0; width: 100%; 
+            height: 80vh; background: rgba(0,0,0,0.95); border-top: 1px solid var(--border);
+            transform: translateY(calc(80vh - 105px)); 
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 1000; display: flex; flex-direction: column;
+            backdrop-filter: blur(10px);
+        }
+        #ui-drawer.expanded { transform: translateY(0); }
+        .drawer-nav { height: 30px; background: var(--panel); display: flex; justify-content: center; align-items: center; cursor: pointer; }
+        .arrow-icon { border: solid var(--neon); border-width: 0 2px 2px 0; display: inline-block; padding: 4px; transition: 0.3s; }
+        .up { transform: rotate(-135deg); }
+        .down { transform: rotate(45deg); }
+
+        /* CONTENT */
+        .drawer-content { flex: 1; overflow-y: auto; padding: 10px; padding-bottom: 30px; }
+        .card { background: rgba(13, 17, 23, 0.8); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; border-radius: 4px; }
+        .card h3 { font-size: 8px; color: var(--neon); text-transform: uppercase; margin: 0 0 5px 0; border-bottom: 1px solid #222; }
+
+        /* TELEMETRY */
+        #telem_content { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
+        .telem-card { min-width: 130px; background: rgba(255,255,255,0.03); border: 1px solid #222; padding: 6px; border-radius: 4px; }
+        .telem-card h4 { color: var(--neon); font-size: 7.5px; margin: 0 0 3px 0; }
+        .stat-row { font-size: 9px; margin-bottom: 1px; }
+        .stat-label { color: #666; margin-right: 3px; }
         .stat-val { color: var(--neon); font-weight: bold; }
-        
-        /* RETRACTABLE SYSTEM */
-        #hidden-controls { display: none; margin-top: 10px; }
-        .toggle-btn { background: #1a1a1a; border: 1px dashed var(--border); color: #888; padding: 10px; width: 100%; font-size: 9px; text-transform: uppercase; border-radius: 4px; margin-bottom: 20px; }
-        .toggle-btn.active { border-color: var(--neon); color: var(--neon); }
 
-        .stepper { display: flex; border: 1px solid var(--border); height: 40px; margin: 4px 0; background: #000; }
-        .stepper button { width: 35px; background: transparent; border: none; color: var(--neon); font-size: 20px; }
-        .stepper input { width: 100%; background: transparent; border: none; color: #fff; text-align: center; font-size: 14px; outline: none; }
-        .btn { width: 100%; padding: 15px; background: transparent; border: 1px solid var(--neon); color: var(--neon); font-size: 11px; font-weight: bold; text-transform: uppercase; margin-top: 8px; border-radius: 4px; }
+        /* CONTROLS */
+        .stepper { display: flex; border: 1px solid var(--border); height: 30px; margin: 2px 0; background: #000; }
+        .stepper button { width: 28px; background: transparent; border: none; color: var(--neon); font-size: 14px; }
+        .stepper input { width: 100%; background: transparent; border: none; color: #fff; text-align: center; font-size: 11px; }
+        .btn { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--neon); color: var(--neon); font-size: 9px; font-weight: bold; text-transform: uppercase; margin-top: 4px; border-radius: 3px; }
+        .btn-danger { border-color: #ff4444; color: #ff4444; }
 
         table { width: 100%; border-collapse: collapse; }
-        th { font-size: 8px; color: #666; text-transform: uppercase; padding-bottom: 5px; }
+        th { font-size: 7px; color: #555; text-transform: uppercase; text-align: left; }
         canvas { display: block; width: 100%; height: 100%; }
     </style>
 </head>
 <body>
 
 <div id="setup-screen">
-    <div class="global-watermark">AARAV SINHA</div>
     <div class="init-box">
-        <h1 style="color:var(--neon); font-size: 22px; letter-spacing:4px;">DYNAMICS LAB</h1>
-        <p style="font-size: 10px; color: #555; margin-bottom: 25px;">PHYSICS v32.0</p>
-        <input type="number" id="n_count" value="2" min="1" max="5" style="background:#000; border:1px solid var(--neon); color:var(--neon); padding:15px; width:100%; text-align:center; font-size: 24px;">
-        <button class="btn" onclick="initLab()">INITIALIZE LAB</button>
+        <h2 style="color:var(--neon); font-size: 16px; margin:0 0 15px 0;">DYNAMICS LAB</h2>
+        <input type="number" id="n_count" value="2" min="1" max="4" style="background:#000; border:1px solid var(--neon); color:var(--neon); padding:10px; width:100%; text-align:center; font-size: 18px; margin-bottom:10px;">
+        <button class="btn" onclick="initLab()">LAUNCH</button>
     </div>
 </div>
 
@@ -64,35 +79,34 @@
     <div class="global-watermark">AARAV SINHA</div>
     <div id="viewport-container"><canvas id="canvas"></canvas></div>
 
-    <div class="ui-stack">
-        <div class="card">
-            <h3>LIVE TELEMETRY</h3>
-            <div id="telem_content"></div>
+    <div id="ui-drawer">
+        <div class="drawer-nav" onclick="toggleDrawer()">
+            <i id="drawer-arrow" class="arrow-icon up"></i>
         </div>
-
-        <button class="toggle-btn" id="togglePanel" onclick="toggleControls()">▽ SHOW CONFIGURATION ▽</button>
-        
-        <div id="hidden-controls">
+        <div class="drawer-content">
             <div class="card">
-                <h3>SIMULATION ENGINE</h3>
-                <button class="btn" id="pBtn" onclick="togglePause()">PAUSE ENGINE</button>
-                <button class="btn" onclick="buildPhysics()" style="border-color:var(--accent); color:var(--accent);">RESET VECTORS</button>
+                <h3>LIVE DATA</h3>
+                <div id="telem_content"></div>
             </div>
-
             <div class="card">
-                <h3>BOB INITIALIZATION</h3>
+                <h3>SIM ENGINE</h3>
+                <button class="btn" id="pBtn" onclick="togglePause()">PAUSE/RESUME</button>
+                <button class="btn" onclick="buildPhysics()" style="border-color:var(--accent); color:var(--accent);">RESET BOBS</button>
+                <button class="btn btn-danger" onclick="location.reload()">TERMINATE LAB</button>
+            </div>
+            <div class="card">
+                <h3>BOB SETUP</h3>
                 <table>
-                    <thead><tr><th>BOB</th><th>LEN</th><th>ANG°</th><th>MASS</th></tr></thead>
+                    <thead><tr><th>#</th><th>LEN</th><th>ANG</th><th>MASS</th></tr></thead>
                     <tbody id="unit_tbody"></tbody>
                 </table>
             </div>
-
             <div class="card">
-                <h3>ENVIRONMENT</h3>
-                <div style="font-size:10px; margin-bottom:5px; display:flex; justify-content:space-between;"><span>GRAVITY</span><span id="gv" style="color:var(--neon)">9.81</span></div>
-                <input type="range" id="grv" min="0" max="500" value="98" style="width:100%;">
-                <div style="font-size:10px; margin:15px 0 5px 0; display:flex; justify-content:space-between;"><span>FRICTION</span><span id="fv" style="color:var(--neon)">0.002</span></div>
-                <input type="range" id="fric" min="0" max="0.5" step="0.001" value="0.002" style="width:100%;">
+                <h3>WORLD</h3>
+                <div class="stat-row"><span class="stat-label">GRAVITY:</span><span id="gv" class="stat-val">9.81</span></div>
+                <input type="range" id="grv" min="0" max="500" value="98" style="width:100%; height:20px;">
+                <div class="stat-row" style="margin-top:5px;"><span class="stat-label">FRICTION:</span><span id="fv" class="stat-val">0.002</span></div>
+                <input type="range" id="fric" min="0" max="0.5" step="0.001" value="0.002" style="width:100%; height:20px;">
             </div>
         </div>
     </div>
@@ -101,19 +115,13 @@
 <script>
     const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
     let n, bobs = [], trail = [], paused = false, live = false, drag = null;
+    let pivotY = 115; // Set to exactly ~3cm from top
 
-    function toggleControls() {
-        const panel = document.getElementById('hidden-controls');
-        const btn = document.getElementById('togglePanel');
-        if (panel.style.display === 'block') {
-            panel.style.display = 'none';
-            btn.innerText = '▽ SHOW CONFIGURATION ▽';
-            btn.classList.remove('active');
-        } else {
-            panel.style.display = 'block';
-            btn.innerText = '△ HIDE CONFIGURATION △';
-            btn.classList.add('active');
-        }
+    function toggleDrawer() {
+        const drawer = document.getElementById('ui-drawer');
+        const arrow = document.getElementById('drawer-arrow');
+        drawer.classList.toggle('expanded');
+        arrow.className = drawer.classList.contains('expanded') ? "arrow-icon down" : "arrow-icon up";
     }
 
     function initLab() {
@@ -122,9 +130,9 @@
         tbody.innerHTML = '';
         for(let i=0; i<n; i++) {
             tbody.innerHTML += `<tr>
-                <td style="color:var(--neon); text-align:center; font-size:10px;">#${i+1}</td>
-                <td><div class="stepper"><button onclick="adj('L${i}',-10)">-</button><input type="number" id="L${i}" value="${120-i*20}" oninput="sync()"><button onclick="adj('L${i}',10)">+</button></div></td>
-                <td><div class="stepper"><button onclick="adj('A${i}',-10)">-</button><input type="number" id="A${i}" value="${30+i*20}" oninput="sync()"><button onclick="adj('A${i}',10)">+</button></div></td>
+                <td style="color:var(--neon); font-size:9px;">#${i+1}</td>
+                <td><div class="stepper"><button onclick="adj('L${i}',-10)">-</button><input type="number" id="L${i}" value="${100-i*15}" oninput="sync()"><button onclick="adj('L${i}',10)">+</button></div></td>
+                <td><div class="stepper"><button onclick="adj('A${i}',-10)">-</button><input type="number" id="A${i}" value="${30+i*15}" oninput="sync()"><button onclick="adj('A${i}',10)">+</button></div></td>
                 <td><div class="stepper"><button onclick="adj('M${i}',-5)">-</button><input type="number" id="M${i}" value="20" oninput="sync()"><button onclick="adj('M${i}',5)">+</button></div></td>
             </tr>`;
         }
@@ -134,31 +142,32 @@
     }
 
     function adj(id, v) { const el = document.getElementById(id); el.value = Math.max(1, parseInt(el.value) + v); sync(); }
-    function togglePause() { paused = !paused; document.getElementById('pBtn').innerText = paused ? "RESUME ENGINE" : "PAUSE ENGINE"; }
-    
+    function togglePause() { paused = !paused; document.getElementById('pBtn').innerText = paused ? "RESUME" : "PAUSE"; }
+
     function buildPhysics() {
         bobs = []; trail = [];
-        let cx = 0, cy = -80;
-        bobs.push({x:0, y:cy, oldX:0, oldY:cy, fixed:true, mass:0, radius:0, lastAng:0, lastAv:0});
+        let cx = 0, cy = pivotY;
+        bobs.push({x:canvas.width/2, y:cy, oldX:canvas.width/2, oldY:cy, fixed:true, radius:0, mass:0});
         for(let i=0; i<n; i++) {
             let l = parseFloat(document.getElementById(`L${i}`).value);
             let a = parseFloat(document.getElementById(`A${i}`).value) * Math.PI/180;
             let m = parseFloat(document.getElementById(`M${i}`).value);
-            cx += l * Math.sin(a); cy += l * Math.cos(a);
-            bobs.push({x:cx, y:cy, oldX:cx, oldY:cy, len:l, mass:m, radius:Math.sqrt(m)*3.5, lastAng:a, lastAv:0});
+            cx = bobs[i].x + l * Math.sin(a); 
+            cy = bobs[i].y + l * Math.cos(a);
+            bobs.push({x:cx, y:cy, oldX:cx, oldY:cy, len:l, mass:m, radius:Math.sqrt(m)*3, lastAng:a});
         }
     }
     function sync() { if(paused || !live) buildPhysics(); }
 
     canvas.addEventListener('touchstart', e => {
-        const r = canvas.getBoundingClientRect(), touch = e.touches[0];
-        const mx = (touch.clientX-r.left-canvas.width/2)/1.2, my = (touch.clientY-r.top-canvas.height/3.5)/1.2;
-        bobs.forEach(b => { if(!b.fixed && Math.hypot(b.x-mx, b.y-my) < 45) drag = b; });
+        const r = canvas.getBoundingClientRect(), t = e.touches[0];
+        const mx = t.clientX - r.left, my = t.clientY - r.top;
+        bobs.forEach(b => { if(!b.fixed && Math.hypot(b.x-mx, b.y-my) < 40) drag = b; });
     });
     canvas.addEventListener('touchmove', e => {
         if(!drag) return;
-        const r = canvas.getBoundingClientRect(), touch = e.touches[0];
-        drag.x = (touch.clientX-r.left-canvas.width/2)/1.2; drag.y = (touch.clientY-r.top-canvas.height/3.5)/1.2;
+        const r = canvas.getBoundingClientRect(), t = e.touches[0];
+        drag.x = t.clientX - r.left; drag.y = t.clientY - r.top;
         drag.oldX = drag.x; drag.oldY = drag.y;
         e.preventDefault();
     }, {passive: false});
@@ -166,51 +175,39 @@
 
     function loop() {
         if(!live) return;
-        const g_val = parseFloat(document.getElementById('grv').value);
-        const f_val = parseFloat(document.getElementById('fric').value);
-        document.getElementById('gv').innerText = (g_val/10).toFixed(2);
-        document.getElementById('fv').innerText = f_val.toFixed(3);
+        const g = parseFloat(document.getElementById('grv').value);
+        const f = parseFloat(document.getElementById('fric').value);
+        document.getElementById('gv').innerText = (g/10).toFixed(2);
+        document.getElementById('fv').innerText = f.toFixed(3);
 
         if(!paused && !drag) {
-            for(let s=0; s<15; s++) { // Increased sub-steps
+            for(let s=0; s<12; s++) {
                 bobs.forEach(b => { if(!b.fixed) {
-                    let vx = (b.x-b.oldX)*(1-f_val/10), vy = (b.y-b.oldY)*(1-f_val/10);
-                    b.oldX=b.x; b.oldY=b.y; b.x+=vx; b.y+=vy+(g_val/1000);
+                    let vx = (b.x-b.oldX)*(1-f/10), vy = (b.y-b.oldY)*(1-f/10);
+                    b.oldX=b.x; b.oldY=b.y; b.x+=vx; b.y+=vy+(g/1000);
                 }});
-
                 for(let k=0; k<25; k++) {
-                    // Collision Physics (Separation + Impulse)
-                    for(let i=1; i<bobs.length; i++) {
-                        for(let j=i+1; j<bobs.length; j++) {
-                            let b1 = bobs[i], b2 = bobs[j];
-                            let dx = b2.x - b1.x, dy = b2.y - b1.y;
-                            let dist = Math.sqrt(dx*dx + dy*dy);
-                            let minDist = b1.radius + b2.radius;
-                            if (dist < minDist && dist > 0) {
-                                let nx = dx / dist, ny = dy / dist;
-                                let overlap = minDist - dist;
-                                b1.x -= nx * overlap * 0.5; b1.y -= ny * overlap * 0.5;
-                                b2.x += nx * overlap * 0.5; b2.y += ny * overlap * 0.5;
-                            }
-                        }
-                    }
-                    // String Constraints
                     for(let i=1; i<bobs.length; i++) {
                         let p1=bobs[i-1], p2=bobs[i], dx=p2.x-p1.x, dy=p2.y-p1.y, d=Math.sqrt(dx*dx+dy*dy), diff=(p2.len-d)/d;
                         if(!p1.fixed){ p1.x-=dx*diff*0.5; p1.y-=dy*diff*0.5; }
                         p2.x+=dx*diff*0.5; p2.y+=dy*diff*0.5;
+                        for(let j=i+1; j<bobs.length; j++) {
+                            let bj=bobs[j], distX=bj.x-p2.x, distY=bj.y-p2.y, dist=Math.sqrt(distX*distX+distY*distY), min=p2.radius+bj.radius;
+                            if(dist<min){ let nx=distX/dist, ny=distY/dist, ov=min-dist; p2.x-=nx*ov*0.5; p2.y-=ny*ov*0.5; bj.x+=nx*ov*0.5; bj.y+=ny*ov*0.5; }
+                        }
                     }
                 }
             }
             trail.push({x:bobs[bobs.length-1].x, y:bobs[bobs.length-1].y});
-            if(trail.length > 25) trail.shift();
+            if(trail.length > 15) trail.shift();
         }
 
-        ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
-        ctx.save(); ctx.translate(canvas.width/2, canvas.height/3.5); ctx.scale(1.2, 1.2);
-        ctx.beginPath(); ctx.strokeStyle='rgba(0,242,255,0.2)';
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        
+        ctx.beginPath(); ctx.strokeStyle='rgba(0,242,255,0.1)';
         trail.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke();
-        ctx.beginPath(); ctx.strokeStyle='#00f2ff'; ctx.lineWidth=3;
+        
+        ctx.beginPath(); ctx.strokeStyle='#00f2ff'; ctx.lineWidth=2;
         ctx.moveTo(bobs[0].x, bobs[0].y); bobs.forEach(b => ctx.lineTo(b.x, b.y)); ctx.stroke();
 
         let tHtml = '';
@@ -218,28 +215,24 @@
             if(i === 0) return;
             ctx.fillStyle = (drag == b ? '#ff00ff' : '#00f2ff');
             ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); ctx.fill();
-            ctx.fillStyle = "#000"; ctx.font = "bold 10px JetBrains Mono"; ctx.textAlign = "center";
-            ctx.fillText(i, b.x, b.y+3);
-            
-            let ang = Math.atan2(b.x - bobs[i-1].x, b.y - bobs[i-1].y);
-            let av = (ang - b.lastAng) * 60; let aa = (av - b.lastAv) * 60;
-            b.lastAng = ang; b.lastAv = av;
-            let vel = Math.hypot(b.x - b.oldX, b.y - b.oldY) * 60;
-            let ke = 0.5 * b.mass * vel * vel, pe = b.mass * (g_val/10) * ((bobs[0].y + 400) - b.y);
+            ctx.fillStyle = "#000"; ctx.font = "bold 7px monospace"; ctx.textAlign = "center";
+            ctx.fillText(i, b.x, b.y + 2.5);
 
+            let ang = Math.atan2(b.x - bobs[i-1].x, b.y - bobs[i-1].y);
             tHtml += `<div class="telem-card">
                 <h4>BOB #${i}</h4>
-                <div class="stat-row"><span>ANGLE</span><span class="stat-val">${(ang*180/Math.PI).toFixed(1)}°</span></div>
-                <div class="stat-row"><span>ω | α</span><span class="stat-val">${av.toFixed(1)} | ${aa.toFixed(1)}</span></div>
-                <div class="stat-row"><span>KE | PE</span><span class="stat-val" style="color:var(--accent)">${(ke/1000).toFixed(1)} | ${(pe/1000).toFixed(1)}</span></div>
-                <div class="stat-row"><span>PERIOD</span><span class="stat-val">${(2*Math.PI*Math.sqrt(b.len/(g_val/10||1))).toFixed(2)}s</span></div>
+                <div class="stat-row"><span class="stat-label">ANG:</span><span class="stat-val">${(ang*180/Math.PI).toFixed(1)}°</span></div>
+                <div class="stat-row"><span class="stat-label">LEN:</span><span class="stat-val">${b.len}px</span></div>
             </div>`;
         });
-        ctx.restore();
         document.getElementById('telem_content').innerHTML = tHtml;
         requestAnimationFrame(loop);
     }
-    function resize() { canvas.width = window.innerWidth; canvas.height = canvas.parentElement.clientHeight; }
+    function resize() { 
+        canvas.width = window.innerWidth; 
+        canvas.height = window.innerHeight; 
+        if(live) buildPhysics(); 
+    }
     window.onresize = resize;
 </script>
 </body>
