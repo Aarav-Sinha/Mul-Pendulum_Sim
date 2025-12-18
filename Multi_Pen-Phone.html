@@ -17,47 +17,43 @@
 
         /* LAB VIEWPORT */
         #lab-screen { display: none; height: 100vh; flex-direction: column; overflow: hidden; position: relative; }
-        
-        /* UPDATED RADIAL GRADIENT */
         #viewport-container { 
             flex: 1; 
-            background: radial-gradient(circle at 50% 115px, #042104 0%, #000000 70%); 
+            background: radial-gradient(circle at 50% 115px, #042104 0%, #000000 75%); 
             touch-action: none; 
         }
 
-        /* DRAWER SYSTEM */
+        /* DRAGGABLE DRAWER SYSTEM */
         #ui-drawer { 
             position: absolute; bottom: 0; left: 0; width: 100%; 
-            height: 80vh; background: rgba(0,0,0,0.95); border-top: 1px solid var(--border);
-            transform: translateY(calc(80vh - 105px)); 
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            height: 70vh; background: rgba(0,0,0,0.92); border-top: 2px solid var(--border);
+            transform: translateY(calc(70vh - 100px)); 
             z-index: 1000; display: flex; flex-direction: column;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            touch-action: none; /* Handled by JS */
         }
-        #ui-drawer.expanded { transform: translateY(0); }
-        .drawer-nav { height: 30px; background: var(--panel); display: flex; justify-content: center; align-items: center; cursor: pointer; }
-        .arrow-icon { border: solid var(--neon); border-width: 0 2px 2px 0; display: inline-block; padding: 4px; transition: 0.3s; }
-        .up { transform: rotate(-135deg); }
-        .down { transform: rotate(45deg); }
 
-        /* CONTENT */
-        .drawer-content { flex: 1; overflow-y: auto; padding: 10px; padding-bottom: 30px; }
-        .card { background: rgba(13, 17, 23, 0.8); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; border-radius: 4px; }
-        .card h3 { font-size: 8px; color: var(--neon); text-transform: uppercase; margin: 0 0 5px 0; border-bottom: 1px solid #222; }
+        .drawer-handle { 
+            height: 35px; background: var(--panel); display: flex; 
+            justify-content: center; align-items: center; cursor: grab;
+            border-bottom: 1px solid #222;
+        }
+        .handle-bar { width: 40px; height: 4px; background: var(--border); border-radius: 2px; }
 
-        /* TELEMETRY */
+        .drawer-content { flex: 1; overflow-y: auto; padding: 10px; padding-bottom: 40px; pointer-events: auto; }
+        .card { background: rgba(13, 17, 23, 0.6); border: 1px solid var(--border); padding: 8px; margin-bottom: 8px; border-radius: 4px; }
+        .card h3 { font-size: 8px; color: var(--neon); text-transform: uppercase; margin: 0 0 5px 0; }
+
         #telem_content { display: flex; overflow-x: auto; gap: 6px; padding-bottom: 4px; }
         .telem-card { min-width: 130px; background: rgba(255,255,255,0.03); border: 1px solid #222; padding: 6px; border-radius: 4px; }
-        .telem-card h4 { color: var(--neon); font-size: 7.5px; margin: 0 0 3px 0; }
         .stat-row { font-size: 9px; margin-bottom: 1px; }
-        .stat-label { color: #666; margin-right: 3px; }
+        .stat-label { color: #666; }
         .stat-val { color: var(--neon); font-weight: bold; }
 
-        /* CONTROLS */
         .stepper { display: flex; border: 1px solid var(--border); height: 30px; margin: 2px 0; background: #000; }
-        .stepper button { width: 28px; background: transparent; border: none; color: var(--neon); font-size: 14px; }
-        .stepper input { width: 100%; background: transparent; border: none; color: #fff; text-align: center; font-size: 11px; }
-        .btn { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--neon); color: var(--neon); font-size: 9px; font-weight: bold; text-transform: uppercase; margin-top: 4px; border-radius: 3px; }
+        .stepper button { width: 28px; color: var(--neon); background: none; border: none; }
+        .stepper input { width: 100%; background: none; border: none; color: #fff; text-align: center; font-size: 11px; }
+        .btn { width: 100%; padding: 10px; background: transparent; border: 1px solid var(--neon); color: var(--neon); font-size: 9px; font-weight: bold; text-transform: uppercase; margin-top: 4px; }
         .btn-danger { border-color: #ff4444; color: #ff4444; }
 
         table { width: 100%; border-collapse: collapse; }
@@ -69,7 +65,7 @@
 
 <div id="setup-screen">
     <div class="init-box">
-        <h2 style="color:var(--neon); font-size: 16px; margin:0 0 15px 0;">DYNAMICS LAB</h2>
+        <h2 style="color:var(--neon); font-size: 16px; margin-bottom: 15px;">DYNAMICS LAB</h2>
         <input type="number" id="n_count" value="2" min="1" max="4" style="background:#000; border:1px solid var(--neon); color:var(--neon); padding:10px; width:100%; text-align:center; font-size: 18px; margin-bottom:10px;">
         <button class="btn" onclick="initLab()">LAUNCH</button>
     </div>
@@ -80,8 +76,8 @@
     <div id="viewport-container"><canvas id="canvas"></canvas></div>
 
     <div id="ui-drawer">
-        <div class="drawer-nav" onclick="toggleDrawer()">
-            <i id="drawer-arrow" class="arrow-icon up"></i>
+        <div class="drawer-handle" id="drag-handle">
+            <div class="handle-bar"></div>
         </div>
         <div class="drawer-content">
             <div class="card">
@@ -89,24 +85,24 @@
                 <div id="telem_content"></div>
             </div>
             <div class="card">
-                <h3>SIM ENGINE</h3>
+                <h3>CONTROLS</h3>
                 <button class="btn" id="pBtn" onclick="togglePause()">PAUSE/RESUME</button>
-                <button class="btn" onclick="buildPhysics()" style="border-color:var(--accent); color:var(--accent);">RESET BOBS</button>
-                <button class="btn btn-danger" onclick="location.reload()">TERMINATE LAB</button>
+                <button class="btn" onclick="buildPhysics()">RESET BOBS</button>
+                <button class="btn btn-danger" onclick="location.reload()">TERMINATE</button>
             </div>
             <div class="card">
-                <h3>BOB SETUP</h3>
+                <h3>ENVIRONMENT</h3>
+                <div class="stat-row"><span>G:</span> <span id="gv" class="stat-val">9.81</span></div>
+                <input type="range" id="grv" min="0" max="500" value="98" style="width:100%;">
+                <div class="stat-row" style="margin-top:8px;"><span>FRIC:</span> <span id="fv" class="stat-val">0.002</span></div>
+                <input type="range" id="fric" min="0" max="0.5" step="0.001" value="0.002" style="width:100%;">
+            </div>
+            <div class="card">
+                <h3>SETUP</h3>
                 <table>
                     <thead><tr><th>#</th><th>LEN</th><th>ANG</th><th>MASS</th></tr></thead>
                     <tbody id="unit_tbody"></tbody>
                 </table>
-            </div>
-            <div class="card">
-                <h3>WORLD</h3>
-                <div class="stat-row"><span class="stat-label">GRAVITY:</span><span id="gv" class="stat-val">9.81</span></div>
-                <input type="range" id="grv" min="0" max="500" value="98" style="width:100%; height:20px;">
-                <div class="stat-row" style="margin-top:5px;"><span class="stat-label">FRICTION:</span><span id="fv" class="stat-val">0.002</span></div>
-                <input type="range" id="fric" min="0" max="0.5" step="0.001" value="0.002" style="width:100%; height:20px;">
             </div>
         </div>
     </div>
@@ -114,15 +110,34 @@
 
 <script>
     const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
-    let n, bobs = [], trail = [], paused = false, live = false, drag = null;
-    let pivotY = 115; // Set to exactly ~3cm from top
+    let n, bobs = [], trail = [], paused = false, live = false, dragBob = null;
+    let pivotY = 115; 
 
-    function toggleDrawer() {
-        const drawer = document.getElementById('ui-drawer');
-        const arrow = document.getElementById('drawer-arrow');
-        drawer.classList.toggle('expanded');
-        arrow.className = drawer.classList.contains('expanded') ? "arrow-icon down" : "arrow-icon up";
-    }
+    // DRAWER DRAG LOGIC
+    const drawer = document.getElementById('ui-drawer');
+    const handle = document.getElementById('drag-handle');
+    let isDraggingDrawer = false, startY, startTranslate;
+    const minHeight = 100, maxHeight = window.innerHeight * 0.7;
+
+    handle.addEventListener('touchstart', e => {
+        isDraggingDrawer = true;
+        startY = e.touches[0].clientY;
+        const style = window.getComputedStyle(drawer);
+        const matrix = new WebKitCSSMatrix(style.transform);
+        startTranslate = matrix.m42;
+    });
+
+    document.addEventListener('touchmove', e => {
+        if (!isDraggingDrawer) return;
+        const deltaY = e.touches[0].clientY - startY;
+        let newTranslate = startTranslate + deltaY;
+        const limitTop = 0;
+        const limitBottom = drawer.offsetHeight - minHeight;
+        newTranslate = Math.max(limitTop, Math.min(newTranslate, limitBottom));
+        drawer.style.transform = `translateY(${newTranslate}px)`;
+    });
+
+    document.addEventListener('touchend', () => isDraggingDrawer = false);
 
     function initLab() {
         n = parseInt(document.getElementById('n_count').value);
@@ -131,9 +146,9 @@
         for(let i=0; i<n; i++) {
             tbody.innerHTML += `<tr>
                 <td style="color:var(--neon); font-size:9px;">#${i+1}</td>
-                <td><div class="stepper"><button onclick="adj('L${i}',-10)">-</button><input type="number" id="L${i}" value="${100-i*15}" oninput="sync()"><button onclick="adj('L${i}',10)">+</button></div></td>
-                <td><div class="stepper"><button onclick="adj('A${i}',-10)">-</button><input type="number" id="A${i}" value="${30+i*15}" oninput="sync()"><button onclick="adj('A${i}',10)">+</button></div></td>
-                <td><div class="stepper"><button onclick="adj('M${i}',-5)">-</button><input type="number" id="M${i}" value="20" oninput="sync()"><button onclick="adj('M${i}',5)">+</button></div></td>
+                <td><div class="stepper"><button onclick="adj('L${i}',-10)">-</button><input type="number" id="L${i}" value="${100-i*15}"><button onclick="adj('L${i}',10)">+</button></div></td>
+                <td><div class="stepper"><button onclick="adj('A${i}',-10)">-</button><input type="number" id="A${i}" value="${30+i*15}"><button onclick="adj('A${i}',10)">+</button></div></td>
+                <td><div class="stepper"><button onclick="adj('M${i}',-5)">-</button><input type="number" id="M${i}" value="20"><button onclick="adj('M${i}',5)">+</button></div></td>
             </tr>`;
         }
         document.getElementById('setup-screen').style.display = 'none';
@@ -143,44 +158,41 @@
 
     function adj(id, v) { const el = document.getElementById(id); el.value = Math.max(1, parseInt(el.value) + v); sync(); }
     function togglePause() { paused = !paused; document.getElementById('pBtn').innerText = paused ? "RESUME" : "PAUSE"; }
+    function sync() { if(paused || !live) buildPhysics(); }
 
     function buildPhysics() {
         bobs = []; trail = [];
-        let cx = 0, cy = pivotY;
-        bobs.push({x:canvas.width/2, y:cy, oldX:canvas.width/2, oldY:cy, fixed:true, radius:0, mass:0});
+        bobs.push({x:canvas.width/2, y:pivotY, oldX:canvas.width/2, oldY:pivotY, fixed:true, radius:0, mass:0});
         for(let i=0; i<n; i++) {
             let l = parseFloat(document.getElementById(`L${i}`).value);
             let a = parseFloat(document.getElementById(`A${i}`).value) * Math.PI/180;
             let m = parseFloat(document.getElementById(`M${i}`).value);
-            cx = bobs[i].x + l * Math.sin(a); 
-            cy = bobs[i].y + l * Math.cos(a);
-            bobs.push({x:cx, y:cy, oldX:cx, oldY:cy, len:l, mass:m, radius:Math.sqrt(m)*3, lastAng:a});
+            let cx = bobs[i].x + l * Math.sin(a), cy = bobs[i].y + l * Math.cos(a);
+            bobs.push({x:cx, y:cy, oldX:cx, oldY:cy, len:l, mass:m, radius:Math.sqrt(m)*3});
         }
     }
-    function sync() { if(paused || !live) buildPhysics(); }
 
     canvas.addEventListener('touchstart', e => {
         const r = canvas.getBoundingClientRect(), t = e.touches[0];
         const mx = t.clientX - r.left, my = t.clientY - r.top;
-        bobs.forEach(b => { if(!b.fixed && Math.hypot(b.x-mx, b.y-my) < 40) drag = b; });
+        bobs.forEach(b => { if(!b.fixed && Math.hypot(b.x-mx, b.y-my) < 40) dragBob = b; });
     });
     canvas.addEventListener('touchmove', e => {
-        if(!drag) return;
+        if(!dragBob) return;
         const r = canvas.getBoundingClientRect(), t = e.touches[0];
-        drag.x = t.clientX - r.left; drag.y = t.clientY - r.top;
-        drag.oldX = drag.x; drag.oldY = drag.y;
+        dragBob.x = t.clientX - r.left; dragBob.y = t.clientY - r.top;
+        dragBob.oldX = dragBob.x; dragBob.oldY = dragBob.y;
         e.preventDefault();
     }, {passive: false});
-    canvas.addEventListener('touchend', () => drag = null);
+    canvas.addEventListener('touchend', () => dragBob = null);
 
     function loop() {
         if(!live) return;
-        const g = parseFloat(document.getElementById('grv').value);
-        const f = parseFloat(document.getElementById('fric').value);
+        const g = parseFloat(document.getElementById('grv').value), f = parseFloat(document.getElementById('fric').value);
         document.getElementById('gv').innerText = (g/10).toFixed(2);
         document.getElementById('fv').innerText = f.toFixed(3);
 
-        if(!paused && !drag) {
+        if(!paused && !dragBob) {
             for(let s=0; s<12; s++) {
                 bobs.forEach(b => { if(!b.fixed) {
                     let vx = (b.x-b.oldX)*(1-f/10), vy = (b.y-b.oldY)*(1-f/10);
@@ -191,10 +203,6 @@
                         let p1=bobs[i-1], p2=bobs[i], dx=p2.x-p1.x, dy=p2.y-p1.y, d=Math.sqrt(dx*dx+dy*dy), diff=(p2.len-d)/d;
                         if(!p1.fixed){ p1.x-=dx*diff*0.5; p1.y-=dy*diff*0.5; }
                         p2.x+=dx*diff*0.5; p2.y+=dy*diff*0.5;
-                        for(let j=i+1; j<bobs.length; j++) {
-                            let bj=bobs[j], distX=bj.x-p2.x, distY=bj.y-p2.y, dist=Math.sqrt(distX*distX+distY*distY), min=p2.radius+bj.radius;
-                            if(dist<min){ let nx=distX/dist, ny=distY/dist, ov=min-dist; p2.x-=nx*ov*0.5; p2.y-=ny*ov*0.5; bj.x+=nx*ov*0.5; bj.y+=ny*ov*0.5; }
-                        }
                     }
                 }
             }
@@ -203,36 +211,25 @@
         }
 
         ctx.clearRect(0,0,canvas.width,canvas.height);
-        
-        ctx.beginPath(); ctx.strokeStyle='rgba(0,242,255,0.1)';
+        ctx.beginPath(); ctx.strokeStyle='rgba(0,242,255,0.15)';
         trail.forEach(p => ctx.lineTo(p.x, p.y)); ctx.stroke();
-        
         ctx.beginPath(); ctx.strokeStyle='#00f2ff'; ctx.lineWidth=2;
         ctx.moveTo(bobs[0].x, bobs[0].y); bobs.forEach(b => ctx.lineTo(b.x, b.y)); ctx.stroke();
 
         let tHtml = '';
         bobs.forEach((b,i) => {
             if(i === 0) return;
-            ctx.fillStyle = (drag == b ? '#ff00ff' : '#00f2ff');
+            ctx.fillStyle = (dragBob == b ? '#ff00ff' : '#00f2ff');
             ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI*2); ctx.fill();
             ctx.fillStyle = "#000"; ctx.font = "bold 7px monospace"; ctx.textAlign = "center";
             ctx.fillText(i, b.x, b.y + 2.5);
-
             let ang = Math.atan2(b.x - bobs[i-1].x, b.y - bobs[i-1].y);
-            tHtml += `<div class="telem-card">
-                <h4>BOB #${i}</h4>
-                <div class="stat-row"><span class="stat-label">ANG:</span><span class="stat-val">${(ang*180/Math.PI).toFixed(1)}°</span></div>
-                <div class="stat-row"><span class="stat-label">LEN:</span><span class="stat-val">${b.len}px</span></div>
-            </div>`;
+            tHtml += `<div class="telem-card"><h4>BOB #${i}</h4><div class="stat-row"><span>ANG:</span> <span class="stat-val">${(ang*180/Math.PI).toFixed(1)}°</span></div></div>`;
         });
         document.getElementById('telem_content').innerHTML = tHtml;
         requestAnimationFrame(loop);
     }
-    function resize() { 
-        canvas.width = window.innerWidth; 
-        canvas.height = window.innerHeight; 
-        if(live) buildPhysics(); 
-    }
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; if(live) buildPhysics(); }
     window.onresize = resize;
 </script>
 </body>
