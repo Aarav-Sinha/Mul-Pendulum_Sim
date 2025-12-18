@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Pendulum Simulation | Aarav Sinha</title>
+    <style>
+        :root { --neon: #00f2ff; --bg: #000; --panel: #0d1117; --border: #30363d; --accent: #ccff00; }
+        * { box-sizing: border-box; font-family: 'JetBrains Mono', monospace; -webkit-tap-highlight-color: transparent; }
+        body, html { margin: 0; padding: 0; background: #000; color: #e6edf3; overflow: hidden; height: 100vh; width: 100vw; }
+
+        /* WATERMARK */
+        .global-watermark { position: fixed; bottom: 10px; right: 15px; color: rgba(0, 242, 255, 0.1); font-size: 10px; letter-spacing: 2px; pointer-events: none; z-index: 10001; text-transform: uppercase; }
+
+        /* SETUP SCREEN */
+        #setup-screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; z-index: 10000; padding: 20px; }
+        .init-box { border: 1px solid var(--neon); padding: 30px 20px; text-align: center; background: #0a0a0a; border-radius: 8px; width: 100%; max-width: 320px; }
+        
+        /* MOBILE LAYOUT */
+        #lab-screen { display: none; width: 100vw; height: 100vh; flex-direction: column; }
+        
+        /* COLLAPSIBLE SIDEBAR FOR MOBILE */
+        .sidebar { position: absolute; left: 0; top: 0; width: 85%; height: 100%; background: var(--panel); z-index: 500; transform: translateX(-100%); transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); border-right: 1px solid var(--border); }
+        .sidebar.open { transform: translateX(0); box-shadow: 10px 0 50px rgba(0,0,0,0.9); }
+        .scroll-area { height: 100%; overflow-y: auto; padding: 15px; padding-top: 60px; }
+
+        /* MOBILE CONTROLS */
+        .menu-toggle { position: absolute; top: 15px; left: 15px; z-index: 600; background: var(--neon); color: #000; border: none; padding: 10px; border-radius: 4px; font-weight: bold; font-size: 12px; }
+        
+        .card { background: rgba(0,0,0,0.5); border: 1px solid var(--border); padding: 12px; margin-bottom: 15px; border-radius: 4px; }
+        .card h3 { font-size: 10px; color: var(--neon); letter-spacing: 1px; margin: 0 0 10px 0; text-transform: uppercase; border-bottom: 1px solid #222; padding-bottom: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { font-size: 8px; color: #666; padding-bottom: 8px; }
+        .stepper { display: flex; border: 1px solid var(--border); height: 35px; margin: 2px 0; }
+        .stepper button { width: 30px; background: #1a1a1a; border: none; color: var(--neon); font-size: 18px; }
+        .stepper input { width: 100%; background: transparent; border: none; color: #fff; text-align: center; font-size: 12px; outline: none; }
+
+        .btn { width: 100%; padding: 15px; background: transparent; border: 1px solid var(--neon); color: var(--neon); font-size: 11px; font-weight: bold; text-transform: uppercase; margin-top: 10px; border-radius: 4px; }
+
+        /* MOBILE VIEWPORT */
+        #viewport-container { flex-grow: 1; position: relative; background: radial-gradient(circle at center, #0d1117 0%, #000 100%); touch-action: none; }
+        
+        /* DRAGGABLE TELEMETRY (TOUCH) */
+        #telemetry_overlay { 
+            position: absolute; top: 70px; right: 10px; width: 160px; 
+            background: rgba(10, 14, 20, 0.9); border: 1px solid var(--neon); 
+            z-index: 200; border-radius: 4px; display: none; 
+        }
+        .drag-handle { background: var(--neon); color: #000; padding: 8px; font-size: 8px; font-weight: bold; text-align: center; }
+        .stat-block { border-bottom: 1px solid #222; padding: 6px; font-size: 9px; }
+        .stat-row { display: flex; justify-content: space-between; }
+        .stat-val { color: var(--neon); }
+
+        canvas { display: block; width: 100%; height: 100%; }
+        .extract-btn { float: right; font-size: 9px; color: var(--accent); }
+    </style>
+</head>
+<body>
+
+<div id="setup-screen">
+    <div class="global-watermark">AARAV SINHA</div>
+    <div class="init-box">
+        <h1 style="color:var(--neon); font-size: 20px; letter-spacing:3px;">DYNAMICS LAB</h1>
+        <p style="font-size: 9px; color: #555; margin-bottom: 25px;">MOBILE OPTIMIZED v28.0</p>
+        <input type="number" id="n_count" value="2" min="1" max="5" style="background:#000; border:1px solid var(--neon); color:var(--neon); padding:15px; width:100%; text-align:center; font-size: 24px; border-radius:4px;">
+        <button class="btn" onclick="initLab()">START LAB</button>
+    </div>
+</div>
+
+<div id="lab-screen">
+    <div class="global-watermark">AARAV SINHA</div>
+    <button class="menu-toggle" onclick="toggleMenu()">CONFIG / TOOLS</button>
+    
+    <aside class="sidebar" id="sidebar">
+        <div class="scroll-area">
+            <button class="btn" onclick="toggleMenu()" style="border-color:#555; color:#888; margin-bottom:20px;">CLOSE MENU</button>
+            
+            <div class="card">
+                <h3>BOB INITIALIZATION</h3>
+                <div id="mobile_params"></div>
+            </div>
+            
+            <div class="card">
+                <h3>ENGINE</h3>
+                <button class="btn" id="pBtn" onclick="togglePause()">PAUSE</button>
+                <button class="btn" onclick="buildPhysics(); toggleMenu();" style="border-color:var(--accent); color:var(--accent);">RESET VECTORS</button>
+            </div>
+
+            <div class="card">
+                <h3>ENVIRONMENT</h3>
+                <div style="font-size:9px; margin-bottom:10px;">GRAVITY: <span id="gv" style="color:var(--neon)">9.81</span></div>
+                <input type="range" id="grv" min="0" max="300" value="98" style="width:100%;">
+                <div style="font-size:9px; margin:15px 0 10px 0;">FRICTION: <span id="fv" style="color:var(--neon)">0.002</span></div>
+                <input type="range" id="fric" min="0" max="0.2" step="0.001" value="0.002" style="width:100%;">
+            </div>
+
+            <div class="card" id="sidebar_telem_card">
+                <h3>LIVE TELEMETRY <span class="extract-btn" onclick="extractTelem()">[EXTRACT]</span></h3>
+                <div id="telem_content_sidebar"></div>
+            </div>
+        </div>
+    </aside>
+
+    <main id="viewport-container">
+        <div id="telemetry_overlay">
+            <div class="drag-handle" id="telem_drag">TELEMETRY DATA</div>
+            <div id="telem_content_overlay"></div>
+            <button onclick="dockTelem()" style="width:100%; background:none; border:none; color:var(--accent); font-size:8px; padding:10px;">DOCK TO MENU</button>
+        </div>
+        <canvas id="canvas"></canvas>
+    </main>
+</div>
+
+<script>
+    const canvas = document.getElementById('canvas'), ctx = canvas.getContext('2d');
+    let n, bobs = [], trail = [], paused = false, live = false, drag = null, extracted = false;
+
+    function toggleMenu() { document.getElementById('sidebar').classList.toggle('open'); }
+
+    function initLab() {
+        n = parseInt(document.getElementById('n_count').value);
+        const container = document.getElementById('mobile_params');
+        container.innerHTML = '';
+        for(let i=0; i<n; i++) {
+            container.innerHTML += `
+                <div style="margin-bottom:15px; border-bottom:1px solid #222; padding-bottom:10px;">
+                    <div style="font-size:10px; color:var(--neon); margin-bottom:5px;">BOB #${i+1}</div>
+                    <div class="stepper">
+                        <button onclick="adj('L${i}',-10)">-</button>
+                        <input type="number" id="L${i}" value="${100-i*15}" oninput="sync()">
+                        <button onclick="adj('L${i}',10)">+</button>
+                    </div>
+                    <div class="stepper">
+                        <button onclick="adj('A${i}',-10)">-</button>
+                        <input type="number" id="A${i}" value="${30+i*20}" oninput="sync()">
+                        <button onclick="adj('A${i}',10)">+</button>
+                    </div>
+                </div><input type="hidden" id="M${i}" value="20">`;
+        }
+        document.getElementById('setup-screen').style.display = 'none';
+        document.getElementById('lab-screen').style.display = 'flex';
+        resize(); buildPhysics(); live = true; loop();
+    }
+
+    function adj(id, v) { const el = document.getElementById(id); el.value = parseInt(el.value) + v; sync(); }
+    function togglePause() { paused = !paused; document.getElementById('pBtn').innerText = paused ? "RESUME" : "PAUSE"; }
+    function extractTelem() { extracted = true; document.getElementById('telemetry_overlay').style.display = 'block'; toggleMenu(); }
+    function dockTelem() { extracted = false; document.getElementById('telemetry_overlay').style.display = 'none'; }
+
+    function buildPhysics() {
+        bobs = []; trail = [];
+        let cx = 0, cy = -100;
+        bobs.push({x:0, y:cy, oldX:0, oldY:cy, fixed:true, lastAng:0});
+        for(let i=0; i<n; i++) {
+            let l = parseFloat(document.getElementById(`L${i}`).value);
+            let a = parseFloat(document.getElementById(`A${i}`).value) * Math.PI/180;
+            cx += l * Math.sin(a); cy += l * Math.cos(a);
+            bobs.push({x:cx, y:cy, oldX:cx, oldY:cy, len:l, mass:20, lastAng:a});
+        }
+    }
+
+    function sync() { if(paused || !live) buildPhysics(); }
+
+    // Touch Interaction
+    canvas.addEventListener('touchstart', e => {
+        const r = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const mx = (touch.clientX-r.left-canvas.width/2)/1.2, my = (touch.clientY-r.top-canvas.height/3)/1.2;
+        bobs.forEach(b => { if(!b.fixed && Math.hypot(b.x-mx, b.y-my) < 40) drag = b; });
+    });
+
+    canvas.addEventListener('touchmove', e => {
+        if(!drag) return;
+        const r = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        drag.x = (touch.clientX-r.left-canvas.width/2)/1.2; drag.y = (touch.clientY-r.top-canvas.height/3)/1.2;
+        drag.oldX = drag.x; drag.oldY = drag.y;
+        e.preventDefault();
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', () => drag = null);
+
+    function loop() {
+        if(!live) return;
+        const g = parseFloat(document.getElementById('grv').value);
+        const f = parseFloat(document.getElementById('fric').value);
+        document.getElementById('gv').innerText = (g/10).toFixed(2);
+        document.getElementById('fv').innerText = f.toFixed(3);
+
+        if(!paused && !drag) {
+            for(let s=0; s<10; s++) {
+                bobs.forEach(b => { if(!b.fixed) {
+                    let vx = (b.x-b.oldX)*(1-f/10), vy = (b.y-b.oldY)*(1-f/10);
+                    b.oldX=b.x; b.oldY=b.y; b.x+=vx; b.y+=vy+(g/1000);
+                }});
+                for(let k=0; k<20; k++) {
+                    for(let i=1; i<bobs.length; i++) {
+                        let p1=bobs[i-1], p2=bobs[i], dx=p2.x-p1.x, dy=p2.y-p1.y, d=Math.sqrt(dx*dx+dy*dy), diff=(p2.len-d)/d;
+                        if(!p1.fixed){ p1.x-=dx*diff*0.5; p1.y-=dy*diff*0.5; }
+                        p2.x+=dx*diff*0.5; p2.y+=dy*diff*0.5;
+                    }
+                }
+            }
+            trail.push({x:bobs[bobs.length-1].x, y:bobs[bobs.length-1].y});
+            if(trail.length > 30) trail.shift();
+        }
+
+        ctx.fillStyle = '#000'; ctx.fillRect(0,0,canvas.width,canvas.height);
+        ctx.save(); ctx.translate(canvas.width/2, canvas.height/3); ctx.scale(1.2, 1.2);
+        
+        ctx.beginPath(); ctx.strokeStyle='rgba(0,242,255,0.3)';
+        trail.forEach((p, idx) => { ctx.lineTo(p.x, p.y); }); ctx.stroke();
+
+        ctx.beginPath(); ctx.strokeStyle='#00f2ff'; ctx.lineWidth=3;
+        ctx.moveTo(bobs[0].x, bobs[0].y);
+        bobs.forEach(b => ctx.lineTo(b.x, b.y)); ctx.stroke();
+
+        let tHtml = '';
+        bobs.forEach((b,i) => {
+            let radius = b.fixed ? 4 : 15;
+            ctx.fillStyle = b.fixed ? '#fff' : (drag == b ? '#ff00ff' : '#00f2ff');
+            ctx.beginPath(); ctx.arc(b.x, b.y, radius, 0, Math.PI*2); ctx.fill();
+            if(i > 0) {
+                ctx.fillStyle = "#000"; ctx.font = "bold 10px JetBrains Mono"; ctx.textAlign = "center";
+                ctx.fillText(i, b.x, b.y+3);
+                let ang = Math.atan2(b.x - bobs[i-1].x, b.y - bobs[i-1].y);
+                tHtml += `<div class="stat-block"><div class="stat-row"><span>BOB ${i}</span><span class="stat-val">${(ang*180/Math.PI).toFixed(0)}°</span></div></div>`;
+            }
+        });
+        ctx.restore();
+        document.getElementById(extracted ? 'telem_content_overlay' : 'telem_content_sidebar').innerHTML = tHtml;
+        requestAnimationFrame(loop);
+    }
+
+    function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+    window.onresize = resize;
+</script>
+</body>
+</html>
